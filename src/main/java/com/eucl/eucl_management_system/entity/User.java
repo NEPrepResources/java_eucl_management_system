@@ -28,13 +28,13 @@ public class User {
     @Size(max = 100)
     private String email;
     @NotBlank(message = "Phone number is required")
-    @Pattern(regexp = "^[0-9]{10,15}$", message = "Phone number shoulw be 10 - 15 digits")
+    @Pattern(regexp = "^[0-9]{10,15}$", message = "Phone number should be 10 - 15 digits")
     private String phone;
     @NotBlank(message = "National ID is required")
-    @Size(min = 16, max = 16, message = "National ID shouls be 16 digits")
+    @Size(min = 16, max = 16, message = "National ID should be 16 digits")
     private String nationalId;
     @NotBlank(message = "Password is required")
-    @Size(min = 8, max = 10, message = "Password should be at least 8 characters")
+    @Size(min = 8, max = 100, message = "Password should be at least 8 characters")
     private String password;
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "user_roles",

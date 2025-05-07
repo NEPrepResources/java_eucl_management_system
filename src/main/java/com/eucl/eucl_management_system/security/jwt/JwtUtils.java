@@ -24,13 +24,17 @@ public class JwtUtils {
 
     public String generateJwtToken(Authentication authentication) {
         UserDetailsImpl userPrincipal = (UserDetailsImpl) authentication.getPrincipal();
+
+        long expirationTime = Long.parseLong(jwtExpiration);
+
         return Jwts.builder()
                 .setSubject((userPrincipal.getUsername()))
                 .setIssuedAt(new Date())
-                .setExpiration(new Date((new Date()).getTime()+jwtExpiration))
+                .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
                 .signWith(key(), SignatureAlgorithm.HS256)
                 .compact();
     }
+
     public Key key() {
         return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
     }
