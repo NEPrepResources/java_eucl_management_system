@@ -55,12 +55,16 @@ public class TokenService {
         String token = generateUniqueToken();
 
         PurchasedToken purchasedToken = new PurchasedToken(
+                null,
                 request.getMeterNumber(),
                 token,
+                PurchasedToken.TokenStatus.NEW,
                 tokenValueDays,
+                LocalDateTime.now(),
                 request.getAmount(),
                 user
         );
+
         PurchasedToken savedToken = purchasedTokenRepository.save(purchasedToken);
         return new TokenResponse(
                 savedToken.getId(),
