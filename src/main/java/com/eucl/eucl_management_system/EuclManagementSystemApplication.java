@@ -7,7 +7,9 @@ import com.eucl.eucl_management_system.entity.Role;
 import com.eucl.eucl_management_system.repository.RoleRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
+@EnableScheduling
 @SpringBootApplication
 public class EuclManagementSystemApplication {
 
