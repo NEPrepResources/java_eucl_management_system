@@ -119,7 +119,6 @@ app.token-value-per-day=100 # RWF per day
 
 ## Database Schema
 
-![Database Diagram](docs/db-diagram.png)
 
 Main tables:
 - `users` - User accounts
