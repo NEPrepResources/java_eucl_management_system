@@ -2,6 +2,7 @@ package com.eucl.eucl_management_system.service;
 
 import com.eucl.eucl_management_system.dto.request.PurchaseRequest;
 import com.eucl.eucl_management_system.dto.response.TokenResponse;
+import com.eucl.eucl_management_system.dto.response.TokenValidationResponse;
 import com.eucl.eucl_management_system.entity.Meter;
 import com.eucl.eucl_management_system.entity.PurchasedToken;
 import com.eucl.eucl_management_system.entity.User;
@@ -9,6 +10,7 @@ import com.eucl.eucl_management_system.exception.ResourceNotFoundException;
 import com.eucl.eucl_management_system.repository.PurchasedTokenRepository;
 import com.eucl.eucl_management_system.repository.UserRepository;
 import com.eucl.eucl_management_system.repository.MeterRepository;
+import org.hibernate.ResourceClosedException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -144,4 +146,45 @@ public class TokenService {
                 token.getAmount()
         );
     }
+
+    public TokenValidationResponse validateToken(String token) {
+        PurchasedToken purchasedToken = purchasedTokenRepository.findByToken(token)
+                .orElseThrow(()->new ResourceClosedException("Token not found"));
+        String message= String.format("This token provides %d days of electricity", purchasedToken.getTokenValueDays());
+        String formattedToken = TokenValidationResponse.formatToken(purchasedToken.getToken());
+        return new TokenValidationResponse(
+                purchasedToken.getToken(),
+                formattedToken,
+                purchasedToken.getMeterNumber(),
+                purchasedToken.getTokenValueDays(),
+                purchasedToken.getPurchaseDate(),
+                purchasedToken.getTokenStatus().name(),
+                message
+        );
+    }
+    public List<TokenResponse> getUserTokensByMeterNumber(String meterNumber) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        Meter meter = meterRepository.findMeterByMeterNumber(meterNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Meter not found"));
+
+        if (!meter.getUser().getId().equals(user.getId())) {
+            throw new IllegalArgumentException("Meter does not belong to this user");
+        }
+
+        return purchasedTokenRepository.findByMeterNumber(meterNumber).stream()
+                .map(token -> new TokenResponse(
+                        token.getId(),
+                        token.getMeterNumber(),
+                        token.getToken(),
+                        token.getTokenStatus().name(),
+                        token.getTokenValueDays(),
+                        token.getPurchaseDate(),
+                        token.getAmount()
+                ))
+                .collect(Collectors.toList());
+    }
+
 }

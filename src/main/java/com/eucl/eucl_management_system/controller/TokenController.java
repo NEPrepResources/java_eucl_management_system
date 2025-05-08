@@ -2,8 +2,10 @@ package com.eucl.eucl_management_system.controller;
 
 import com.eucl.eucl_management_system.dto.request.PurchaseRequest;
 import com.eucl.eucl_management_system.dto.response.TokenResponse;
+import com.eucl.eucl_management_system.dto.response.TokenValidationResponse;
 import com.eucl.eucl_management_system.service.TokenService;
 import jakarta.validation.Valid;
+import org.antlr.v4.runtime.Token;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -31,6 +33,17 @@ public class TokenController {
     public ResponseEntity<List<TokenResponse>> getMeterTokens(
             @PathVariable String meterNumber) {
         List<TokenResponse> tokens = tokenService.getMeterTokens(meterNumber);
+        return ResponseEntity.ok(tokens);
+    }
+
+    @GetMapping("/validate/{token}")
+    public ResponseEntity<TokenValidationResponse> validateToken(@PathVariable String token) {
+        TokenValidationResponse response = tokenService.validateToken(token);
+        return ResponseEntity.ok(response);
+    }
+
+    public ResponseEntity<List<TokenResponse>> getUserTokenByMeterNumber(@PathVariable String meterNumber) {
+        List<TokenResponse> tokens = tokenService.getUserTokensByMeterNumber(meterNumber);
         return ResponseEntity.ok(tokens);
     }
 
