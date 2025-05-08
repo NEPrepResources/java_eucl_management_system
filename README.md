@@ -36,7 +36,7 @@ Spring Boot backend for electricity prepaid token generation and management syst
 
 2. **Installation**:
    ```bash
-   git clone https://github.com/your-repo/eucl-prepaid-system.git
+   git clone https://github.com/NEPrepResources/java_eucl_management_system.git 
    cd eucl-prepaid-system
    mvn clean install
    ```
