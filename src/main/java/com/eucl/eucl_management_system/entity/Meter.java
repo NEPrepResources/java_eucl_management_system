@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+import java.util.List;
+
 @Entity
 @Table(name = "meters",
 uniqueConstraints = {
@@ -20,6 +22,8 @@ public class Meter {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+    @OneToMany(mappedBy = "meterNumber", fetch = FetchType.LAZY)
+    private List<PurchasedToken> purchasedTokens;
 
     public Meter() {}
     public Meter(String meterNumber, User user) {
@@ -32,4 +36,7 @@ public class Meter {
     public void setMeterNumber(String meterNumber) {this.meterNumber = meterNumber;}
     public User getUser() {return user;}
     public void setUser(User user) {this.user = user;}
+    public List<PurchasedToken> getPurchasedTokens() {return purchasedTokens;}
+
+    public void setPurchasedTokens(List<PurchasedToken> purchasedTokens) {this.purchasedTokens = purchasedTokens;}
 }
