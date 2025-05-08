@@ -12,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/meters")
@@ -30,5 +32,10 @@ public class MeterController {
         }catch (ResourceNotFoundException e){
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+    @GetMapping("/user/{email}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<MeterResponse>> getMeterByUserEmail(@PathVariable String email) {
+        return ResponseEntity.ok(meterService.getMetersByUserEmail(email));
     }
 }

@@ -11,7 +11,7 @@ public class MeterRequest {
     @Pattern(regexp = "^[a-zA-Z0-9]*$", message = "Meter number must be alphanumeric")
     private String meterNumber;
     @NotBlank(message = "Email is required")
-    @Email(message = "Emaill must be valid")
+    @Email(message = "Email must be valid")
     private String userEmail;
 
     public String getMeterNumber() {return meterNumber;}

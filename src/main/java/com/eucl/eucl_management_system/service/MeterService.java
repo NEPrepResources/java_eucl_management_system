@@ -10,6 +10,9 @@ import com.eucl.eucl_management_system.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 public class MeterService {
     @Autowired
@@ -18,7 +21,7 @@ public class MeterService {
     private UserRepository userRepository;
 
     public MeterResponse registerMeter(MeterRequest meterRequest) {
-        if(meterRepository.existsMeterByMeterNumber(meterRequest.getMeterNumber())){
+        if(meterRepository.existsByMeterNumber(meterRequest.getMeterNumber())){
             throw new IllegalArgumentException("Meter number already exists");
         }
 
@@ -34,5 +37,12 @@ public class MeterService {
                 user.getName()
         );
 
+    }
+    public List<MeterResponse> getMetersByUserEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(()-> new ResourceNotFoundException("User not found with email: " + email));
+        List<Meter> meters = meterRepository.findByUser(user);
+        return  meters.stream()
+                .map(m->new MeterResponse(m.getId(), m.getMeterNumber(), user.getEmail(), user.getName())).collect(Collectors.toList());
     }
 }

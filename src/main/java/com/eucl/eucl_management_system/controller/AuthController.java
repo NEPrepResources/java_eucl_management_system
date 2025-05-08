@@ -182,4 +182,25 @@ public class AuthController {
                     .body(Map.of("error", "An error occurred during registration: " + e.getMessage()));
         }
     }
+
+    @PostMapping("/create-admin")
+    public ResponseEntity <?> createAdminUser(){
+        if(userRepository.existsByEmail("admin@eucl.rw")){
+            return ResponseEntity.badRequest().body("Admin already exists");
+        }
+        User admin = new User(
+                "Admin",
+                "admin@eucl.rw",
+                "0781234567",
+                "ADMIN12345123456",
+                passwordEncoder.encode("admin123")
+        );
+        Set<Role> roles = new HashSet<>();
+        Role adminRole = roleRepository.findByName(Erole.ROLE_ADMIN)
+                .orElseThrow(() -> new RuntimeException("Role not found"));
+        roles.add(adminRole);
+        admin.setRoles(roles);
+        userRepository.save(admin);
+        return ResponseEntity.ok(new MessageResponse("Admin created successfully"));
+    }
 }
