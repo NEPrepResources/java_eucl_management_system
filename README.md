@@ -173,18 +173,3 @@ Key features:
    COPY target/*.jar app.jar
    ENTRYPOINT ["java","-jar","/app.jar"]
    ```
-```
-
-### Additional Recommendations:
-
-1. Create a `docs/` folder with:
-   - `db-diagram.png` - Database schema diagram
-   - `postman-collection.json` - Postman export
-   - `swagger-screenshot.png` - Example of Swagger UI
-
-2. For the database diagram, you can use:
-   - [DBDiagram.io](https://dbdiagram.io)
-   - MySQL Workbench
-   - pgAdmin 4's diagram tool
-
-3. Include sample requests/responses in the documentation if needed
