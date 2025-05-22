@@ -11,6 +11,7 @@ import java.util.List;
 uniqueConstraints = {
         @UniqueConstraint(columnNames = "meterNumber")
 })
+
 public class Meter {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

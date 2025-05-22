@@ -11,6 +11,9 @@ import com.eucl.eucl_management_system.repository.RoleRepository;
 import com.eucl.eucl_management_system.repository.UserRepository;
 import com.eucl.eucl_management_system.security.jwt.JwtUtils;
 import com.eucl.eucl_management_system.service.UserDetailsImpl;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +38,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
+@Tag(name = "Authentication", description = "Endpoints for user authentication and registration")
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -55,6 +59,8 @@ public class AuthController {
     @Autowired
     JwtUtils jwtUtils;
 
+    @Operation(summary = "User login", description = "Authenticate user and return JWT token")
+    @ApiResponse(responseCode = "200", description = "User successfully logged in")
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
         try {
@@ -118,6 +124,8 @@ public class AuthController {
         }
     }
 
+    @Operation(summary = "Register new user", description = "Create new user account")
+    @ApiResponse(responseCode = "200", description = "User successfully registered")
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
         try {
@@ -183,6 +191,8 @@ public class AuthController {
         }
     }
 
+    @Operation(summary = "Register admin", description = "Create admin, one time admin creation")
+    @ApiResponse(responseCode = "200", description = "Admin successfully created")
     @PostMapping("/create-admin")
     public ResponseEntity <?> createAdminUser(){
         if(userRepository.existsByEmail("admin@eucl.rw")){

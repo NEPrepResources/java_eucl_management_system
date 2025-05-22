@@ -7,13 +7,12 @@ import com.eucl.eucl_management_system.entity.Meter;
 import com.eucl.eucl_management_system.entity.PurchasedToken;
 import com.eucl.eucl_management_system.entity.User;
 import com.eucl.eucl_management_system.exception.ResourceNotFoundException;
+import com.eucl.eucl_management_system.repository.MeterRepository;
 import com.eucl.eucl_management_system.repository.PurchasedTokenRepository;
 import com.eucl.eucl_management_system.repository.UserRepository;
-import com.eucl.eucl_management_system.repository.MeterRepository;
-import org.hibernate.ResourceClosedException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,118 +23,127 @@ import java.util.stream.Collectors;
 
 @Service
 public class TokenService {
-    private static final int TOKEN_LENGTH = 16;
+    private static final Logger logger = LoggerFactory.getLogger(TokenService.class);
 
     @Autowired
     private PurchasedTokenRepository purchasedTokenRepository;
 
     @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
     private MeterRepository meterRepository;
 
-    @Value("${app.max-token-days}")
-    private int maxTokenDays;
-
-    @Value("${app.token-value-per-day}")
-    private int tokenValuePerDay;
+    @Autowired
+    private UserRepository userRepository;
 
     @Transactional
-    public TokenResponse purchaseToken(PurchaseRequest request) {
-        // Validate amount
-        if (request.getAmount() < tokenValuePerDay) {
-            throw new IllegalArgumentException("Minimum purchase amount is " + tokenValuePerDay + " RWF");
-        }
+    public TokenResponse purchaseToken(PurchaseRequest purchaseRequest) {
+        try {
+            logger.info("Purchasing token for meter: {}", purchaseRequest.getMeterNumber());
 
-        if (request.getAmount() % tokenValuePerDay != 0) {
-            throw new IllegalArgumentException("Amount must be a multiple of " + tokenValuePerDay);
-        }
-
-        // Calculate token value in days
-        int tokenValueDays = request.getAmount() / tokenValuePerDay;
-
-        if (tokenValueDays > maxTokenDays) {
-            throw new IllegalArgumentException("Cannot purchase more than " + maxTokenDays + " days");
-        }
-
-        // Get current user
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByEmail(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-        // Verify meter exists and belongs to user
-        Meter meter = meterRepository.findMeterByMeterNumber(request.getMeterNumber())
-                .orElseThrow(() -> new ResourceNotFoundException("Meter not found"));
-
-        if (!meter.getUser().getId().equals(user.getId())) {
-            throw new IllegalArgumentException("Meter does not belong to this user");
-        }
-
-        // Generate and validate token
-        String token = generateUniqueToken();
-
-        // Create token entity
-        PurchasedToken purchasedToken = new PurchasedToken();
-        purchasedToken.setMeterNumber(request.getMeterNumber());
-        purchasedToken.setToken(token);
-        purchasedToken.setTokenStatus(PurchasedToken.TokenStatus.NEW);
-        purchasedToken.setTokenValueDays(tokenValueDays);
-        purchasedToken.setPurchaseDate(LocalDateTime.now());
-        purchasedToken.setAmount(request.getAmount());
-        purchasedToken.setUser(user);
-
-        // Save token
-        PurchasedToken savedToken = purchasedTokenRepository.save(purchasedToken);
-
-        return mapToTokenResponse(savedToken);
-    }
-
-    private String generateUniqueToken() {
-        Random random = new Random();
-        String token;
-        int attempts = 0;
-        final int MAX_ATTEMPTS = 10;
-
-        do {
-            if (attempts++ >= MAX_ATTEMPTS) {
-                throw new IllegalStateException("Failed to generate unique token after " + MAX_ATTEMPTS + " attempts");
+            Meter meter = meterRepository.findMeterByMeterNumber(purchaseRequest.getMeterNumber())
+                    .orElseThrow(() -> new ResourceNotFoundException("Meter not found with number: " + purchaseRequest.getMeterNumber()));
+            User user = meter.getUser();
+            if (user == null) {
+                throw new ResourceNotFoundException("Meter has no associated user: " + purchaseRequest.getMeterNumber());
             }
 
-            // Generate 16-digit numeric token
-            StringBuilder sb = new StringBuilder(TOKEN_LENGTH);
-            for (int i = 0; i < TOKEN_LENGTH; i++) {
-                sb.append(random.nextInt(10));
+            // Generate a unique 16-digit token
+            String token = generateToken();
+            while (purchasedTokenRepository.existsByToken(token)) {
+                token = generateToken();
             }
-            token = sb.toString();
-        } while (purchasedTokenRepository.existsByToken(token));
 
-        return token;
-    }
+            int tokenValueDays = calculateTokenValueDays(purchaseRequest.getAmount());
+            if (tokenValueDays < 1) {
+                throw new IllegalArgumentException("Amount must be sufficient to purchase at least 1 day (minimum 100 RWF)");
+            }
 
-    public List<TokenResponse> getUserTokens() {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByEmail(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+            PurchasedToken purchasedToken = new PurchasedToken();
+            purchasedToken.setMeterNumber(purchaseRequest.getMeterNumber());
+            purchasedToken.setToken(token);
+            purchasedToken.setTokenStatus(PurchasedToken.TokenStatus.NEW);
+            purchasedToken.setTokenValueDays(tokenValueDays);
+            purchasedToken.setPurchaseDate(LocalDateTime.now());
+            purchasedToken.setAmount(purchaseRequest.getAmount());
+            purchasedToken.setUser(user);
+            purchasedToken = purchasedTokenRepository.save(purchasedToken);
 
-        return purchasedTokenRepository.findByUser(user).stream()
-                .map(this::mapToTokenResponse)
-                .collect(Collectors.toList());
+            logger.info("Successfully purchased token for meter: {}, token ID: {}", purchaseRequest.getMeterNumber(), purchasedToken.getId());
+            return new TokenResponse(
+                    purchasedToken.getId(),
+                    purchasedToken.getMeterNumber(),
+                    purchasedToken.getToken(),
+                    purchasedToken.getTokenStatus().name(),
+                    purchasedToken.getTokenValueDays(),
+                    purchasedToken.getPurchaseDate(),
+                    purchasedToken.getAmount()
+            );
+        } catch (Exception e) {
+            logger.error("Failed to purchase token for meter {}: {}", purchaseRequest.getMeterNumber(), e.getMessage(), e);
+            throw e;
+        }
     }
 
     public List<TokenResponse> getMeterTokens(String meterNumber) {
+        logger.info("Fetching tokens for meter: {}", meterNumber);
         return purchasedTokenRepository.findByMeterNumber(meterNumber).stream()
-                .map(this::mapToTokenResponse)
+                .map(token -> new TokenResponse(
+                        token.getId(),
+                        token.getMeterNumber(),
+                        token.getToken(),
+                        token.getTokenStatus().name(),
+                        token.getTokenValueDays(),
+                        token.getPurchaseDate(),
+                        token.getAmount()))
                 .collect(Collectors.toList());
+    }
+
+    public TokenValidationResponse validateToken(String token) {
+        logger.info("Validating token: {}", token);
+        PurchasedToken purchasedToken = purchasedTokenRepository.findByToken(token)
+                .orElseThrow(() -> new ResourceNotFoundException("Token not found: " + token));
+
+        String status = purchasedToken.getTokenStatus().name();
+        String message = status.equals("NEW") ? "Token is valid" : "Token is " + status.toLowerCase();
+        return new TokenValidationResponse(
+                purchasedToken.getToken(),
+                TokenValidationResponse.formatToken(purchasedToken.getToken()),
+                purchasedToken.getMeterNumber(),
+                purchasedToken.getTokenValueDays(),
+                purchasedToken.getPurchaseDate(),
+                status,
+                message
+        );
     }
 
     public List<TokenResponse> getAllTokens() {
+        logger.info("Fetching all tokens");
         return purchasedTokenRepository.findAll().stream()
-                .map(this::mapToTokenResponse)
+                .map(token -> new TokenResponse(
+                        token.getId(),
+                        token.getMeterNumber(),
+                        token.getToken(),
+                        token.getTokenStatus().name(),
+                        token.getTokenValueDays(),
+                        token.getPurchaseDate(),
+                        token.getAmount()))
                 .collect(Collectors.toList());
     }
 
-    private TokenResponse mapToTokenResponse(PurchasedToken token) {
+    public TokenResponse updateToken(Long tokenId, PurchaseRequest updateRequest) {
+        logger.info("Updating token with ID: {}", tokenId);
+        PurchasedToken token = purchasedTokenRepository.findById(tokenId)
+                .orElseThrow(() -> new ResourceNotFoundException("Token not found with ID: " + tokenId));
+
+        Meter meter = meterRepository.findMeterByMeterNumber(updateRequest.getMeterNumber())
+                .orElseThrow(() -> new ResourceNotFoundException("Meter not found with number: " + updateRequest.getMeterNumber()));
+
+        token.setMeterNumber(updateRequest.getMeterNumber());
+        token.setAmount(updateRequest.getAmount());
+        token.setTokenValueDays(calculateTokenValueDays(updateRequest.getAmount()));
+        token.setUser(meter.getUser());
+        purchasedTokenRepository.save(token);
+
+        logger.info("Successfully updated token with ID: {}", tokenId);
         return new TokenResponse(
                 token.getId(),
                 token.getMeterNumber(),
@@ -147,44 +155,24 @@ public class TokenService {
         );
     }
 
-    public TokenValidationResponse validateToken(String token) {
-        PurchasedToken purchasedToken = purchasedTokenRepository.findByToken(token)
-                .orElseThrow(()->new ResourceClosedException("Token not found"));
-        String message= String.format("This token provides %d days of electricity", purchasedToken.getTokenValueDays());
-        String formattedToken = TokenValidationResponse.formatToken(purchasedToken.getToken());
-        return new TokenValidationResponse(
-                purchasedToken.getToken(),
-                formattedToken,
-                purchasedToken.getMeterNumber(),
-                purchasedToken.getTokenValueDays(),
-                purchasedToken.getPurchaseDate(),
-                purchasedToken.getTokenStatus().name(),
-                message
-        );
+    public void deleteToken(Long tokenId) {
+        logger.info("Deleting token with ID: {}", tokenId);
+        PurchasedToken token = purchasedTokenRepository.findById(tokenId)
+                .orElseThrow(() -> new ResourceNotFoundException("Token not found with ID: " + tokenId));
+        purchasedTokenRepository.delete(token);
+        logger.info("Successfully deleted token with ID: {}", tokenId);
     }
-    public List<TokenResponse> getUserTokensByMeterNumber(String meterNumber) {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByEmail(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        Meter meter = meterRepository.findMeterByMeterNumber(meterNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("Meter not found"));
-
-        if (!meter.getUser().getId().equals(user.getId())) {
-            throw new IllegalArgumentException("Meter does not belong to this user");
+    private String generateToken() {
+        Random random = new Random();
+        StringBuilder sb = new StringBuilder(16);
+        for (int i = 0; i < 16; i++) {
+            sb.append(random.nextInt(10));
         }
-
-        return purchasedTokenRepository.findByMeterNumber(meterNumber).stream()
-                .map(token -> new TokenResponse(
-                        token.getId(),
-                        token.getMeterNumber(),
-                        token.getToken(),
-                        token.getTokenStatus().name(),
-                        token.getTokenValueDays(),
-                        token.getPurchaseDate(),
-                        token.getAmount()
-                ))
-                .collect(Collectors.toList());
+        return sb.toString();
     }
 
+    private int calculateTokenValueDays(int amount) {
+        return Math.max(amount / 100, 1);
+    }
 }

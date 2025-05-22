@@ -1,14 +1,30 @@
 package com.eucl.eucl_management_system.dto.response;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
+@Schema(description = "Response object containing JWT and user details")
 public class JwtResponse {
+    @Schema(description = "JWT token for authentication", example = "eyJhbGciOiJIUzI1NiJ9...", required = true)
     private String token;
-    private String type="Bearer";
+
+    @Schema(description = "Token type (always 'Bearer')", example = "Bearer", required = true)
+    private String type = "Bearer";
+
+    @Schema(description = "Unique identifier of the user", example = "1", required = true)
     private Long id;
+
+    @Schema(description = "User's full name", example = "John Doe")
     private String name;
+
+    @Schema(description = "User's email address", example = "john.doe@example.com")
     private String email;
+
+    @Schema(description = "User's phone number", example = "12345678901")
     private String phone;
+
+    @ArraySchema(schema = @Schema(description = "User's roles", example = "ROLE_USER", type = "string"))
     private List<String> roles;
 
     public JwtResponse(String token, Long id, String name, String email, String phone, List<String> roles) {
@@ -20,18 +36,19 @@ public class JwtResponse {
         this.phone = phone;
         this.roles = roles;
     }
-    public String getToken() {return token;}
-    public String getType() {return type;}
-    public Long getId() {return id;}
-    public String getName() {return name;}
-    public String getEmail() {return email;}
-    public String getPhone() {return phone;}
-    public List<String> getRoles() {return roles;}
-    public void setToken(String token) {this.token = token;}
-    public void setType(String type) {this.type = type;}
-    public void setId(Long id) {this.id = id;}
-    public void setName(String name) {this.name = name;}
-    public void setEmail(String email) {this.email = email;}
-    public void setPhone(String phone) {this.phone = phone;}
-    public void setRoles(List<String> roles) {this.roles = roles;}
+
+    public String getToken() { return token; }
+    public String getType() { return type; }
+    public Long getId() { return id; }
+    public String getName() { return name; }
+    public String getEmail() { return email; }
+    public String getPhone() { return phone; }
+    public List<String> getRoles() { return roles; }
+    public void setToken(String token) { this.token = token; }
+    public void setType(String type) { this.type = type; }
+    public void setId(Long id) { this.id = id; }
+    public void setName(String name) { this.name = name; }
+    public void setEmail(String email) { this.email = email; }
+    public void setPhone(String phone) { this.phone = phone; }
+    public void setRoles(List<String> roles) { this.roles = roles; }
 }
