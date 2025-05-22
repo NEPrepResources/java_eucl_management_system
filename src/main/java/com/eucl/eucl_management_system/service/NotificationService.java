@@ -57,7 +57,7 @@ public class NotificationService {
                             "Expiration Date: %s\n" +
                             "--------------------------------------------------\n\n" +
                             "Please purchase a new token to ensure uninterrupted service. You can do so via our website or contact our support team.\n\n" +
-                            "For assistance, reach out to us at support@eucl.com or call +123-456-7890.\n\n" +
+                            "For assistance, reach out to us at support@eucl.com or call (250)798-384-666.\n\n" +
                             "Thank you,\nEUCL Management Team",
                     userName, token.getToken(), token.getMeterNumber(), formattedDate
             );
